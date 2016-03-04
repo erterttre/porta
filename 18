@@ -1,0 +1,271 @@
+Восстановление репликации сервера MySQL.
+
+Цель работы:  Провести восстановление репликации серверов MySQL используя создание слепков файловой системы.
+
+Теоретические сведения
+		HowTo Mysql Replication.doc
+		Лекционный материал
+
+Задание
+		Восстановить репликацию между двумя MySQL серверами с минимизацией времени простои позицию N.
+
+FreeBSD:
+	Останавливаем сервер 	на мастере.
+# sudo /usr/local/etc/rc.d/mysql-server.sh stop
+
+	Делаем snapshot файловой системы:
+
+                     # sudo mksnap_ffs /var /var/snapshot/snap
+
+	Запускаем mysql
+                     #sudo /usr/local/etc/rc.d/mysql-server.sh start
+
+	монтируем snapshot
+                     #sudo mdconfig -a -t vnode -f /var/snapshot/snap -u 4
+                     #cd /mnt && sudo mkdir backup
+                     #sudo mount -r /dev/md4 /mnt/backup
+
+	Копируем базу данных
+На мастере:
+
+#cd /mnt/backup/db/
+
+#tar czf /var/dbcopy.tar.gz mysql 
+
+#md5 /var/dbcopy.tar.gz
+
+#sudo scp  /var/dbcopy.tar.gz [user]@mysql-slave:/var/tmp
+
+На слейве:
+
+                     #sudo /usr/local/etc/rc.d/mysql-server-slave.sh stop
+
+	Удаляем старую
+#sudo rm -r /var/db/mysql
+
+
+	Проверяем целостность архива
+
+                     #md5 /var/tmp/dbcopy.tar.gz
+
+	Распаковываем новую базу
+#mkdir dbcopy_tmp
+#mv dbcopy.tar.gz dbcopy_tmp/
+#cd dbcopy_tmp/
+#tar xzf dbcopy.tar.gz
+
+#sudo cp -R mysql /var/db
+
+	Корректируем права доступа
+                     #sudo chown -R mysql:mysql /var/db/mysql
+                     #sudo chmod -R u+rw /var/db/mysql
+
+	запускаем слейв-сервер
+
+           #sudo /usr/local/etc/rc.d/mysql-server-slave.sh start
+
+	Возобновляем работу рпликации с записанного ранее бинарного лога и позиции
+                     mysql> CHANGE MASTER TO            MASTER_LOG_FILE='bin-log ',MASTER_LOG_POS=' N'; 
+
+	Запускаем репликацию
+                     mysql > slave start;
+
+	проверяем репликацию
+                    mysq> show slave status\G'
+
+	Удаляем snapshot и архивы.
+На мастере
+                   #sudo umount /mnt/backup
+                   #sudo mdconfig -d -u4
+
+                   #sudo rm -f /var/snapshot/snap
+                   #sudo rm /var/dbcopy.tar.gz
+
+На слейве
+
+                   #cd /var/tmp/ && rm dbcopy_tmp
+
+
+Linux: 
+
+	Останавливаем сервер 	на мастере.
+		# sudo /etc/init.d/mysqld stop
+
+Убеждаемся, что сервер остановился:
+
+                     # ps -aux | grep mysql
+
+Примечание1: Для использования LVM слепков файловых систем, разделы должны быть созданы при помощи LVM, для не LVM разделов нельзя сделать слепок.
+
+Примечание 2 : слепок создается для всего LVM раздела.
+
+
+	Делаем слепок раздела :
+
+Примечение 3: Для создания тома для слепка необходимо свободное место в логической группе.
+
+Проверить нужно командой vgdisplay.
+
+# lvcreate -L592M -s -n dbbackup /dev/VolGroup00/LogVol00
+
+где dbbackup имя нового логического тома, который будет создан в той же логической группе, что и логический том для которого мы делаем слепок.
+
+/dev/VolGroup00/LogVol00 - логический том для которого мы делаем слепок.
+
+Посмотреть названия логического тома LVM можно командой 
+
+             # lvdisplay
+
+
+
+
+	Запускаем сервер mysql на мастер-сервере:
+
+             #/etc/init.d/mysqld start
+
+Далее система работает в штатном режиме и обрабатывает все сообщения, время простоя исчисляется минутами.
+
+
+	Монтируем слепок в созданную нами папку:
+
+             #mkdir /mnt/backup
+
+            # mount /dev/VolGroup00/dbbackup /mnt/dbbackup
+
+
+
+	Копируем базу данных
+На мастере:
+
+#cd /mnt/backup/
+
+#tar czf /root/dbcopy.tar.gz usr/lib/mysql 
+
+#md5 /var/dbcopy.tar.gz
+
+#sudo scp  /var/dbcopy.tar.gz [user]@mysql-slave:/root
+
+На слейве:
+
+                     #sudo /etc/init.d/mysqls  stop
+
+	Удаляем старую
+#sudo rm -r /var/lib/mysql
+
+
+	Проверяем целостность архива
+
+                     #md5 /root/dbcopy.tar.gz
+
+	Распаковываем новую базу
+#mkdir dbcopy_tmp
+#mv dbcopy.tar.gz dbcopy_tmp/
+#cd dbcopy_tmp/
+#tar xzf dbcopy.tar.gz
+
+#sudo cp -R mysql /var/lib/mysql
+
+	Корректируем права доступа
+                     #sudo chown -R mysql:mysql /var/lib/mysql
+                     #sudo chmod -R u+rw /var/lib/mysql
+
+	запускаем слейв-сервер
+
+           #sudo /etc/init.d/mysqls start
+
+	Возобновляем работу рпликации с записанного ранее бинарного лога и позиции
+                     mysql> CHANGE MASTER TO            MASTER_LOG_FILE='bin-log ',MASTER_LOG_POS=' N'; 
+
+	Запускаем репликацию
+                     mysql > slave start;
+
+	проверяем репликацию
+                    mysq> show slave status\G'
+
+	Удаляем snapshot и архивы.
+На мастере
+После всех действий со слепком нужно его отмонтировать и удалить.
+
+            # umount /mnt/backup
+
+            # lvremove /dev/VolGroup00/dbbackup
+
+             #sudo rm /root/dbcopy.tar.gz
+
+На слейве
+
+                   #cd /root && rm dbcopy_tmp
+
+
+Вопросы
+	Главный файл настройки сервера
+/etc/mysql/my.cnf
+	Инициализация основной базы mysql
+Необходимо выполнить скрипт mysql_install_db  который устанавливает системные таблицы, таблицы помощи, а также настраивает таблици привилегий.
+
+	Запуск сервера в безопастном режиме
+Сервер запускается в безопасном режиме по умолчанию с помощью скрипта mysqld_safe, он обеспечивает ребут сервера при ошибках и запись сообщений об ошибках в лог.
+	 Работа с mysql клиент
+	mysql клиент предназначен для администрирования и управления БД mysql. Основные опции:
+-u имя пользователя 
+-p пароль
+	Также клиент позволяет выполнять sql выражения из файла
+mysql db_name < script.sql > output.tab
+	Создание базы данных, таблиц.
+Для создания базы данных используется команда:
+CREATE DATABASE [IF NOT EXISTS] db_name [CHARACTER SET charset] [COLLATE collation];
+Например
+CREATE DATABASE IF NOT EXISTS Movies CHARACTER SET utf8;
+
+	Для создания таблиц используется команда:
+	CREATE TABLE table_name
+(
+column_name1 data_type(size),
+column_name2 data_type(size),
+column_name3 data_type(size),
+....
+);
+	Например:
+CREATE TABLE CUSTOMERS(
+   ID   INT              NOT NULL,
+   NAME VARCHAR (20)     NOT NULL,
+   AGE  INT              NOT NULL,
+   ADDRESS  CHAR (25) ,
+   SALARY   DECIMAL (18, 2),       
+   CONSTRAINT pk PRIMARY KEY (ID)
+);
+	Наполнение базы  данными.
+Наполнение бд может быть произведено с помощью команды  INSERT:
+INSERT [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE]
+    [INTO] tbl_name
+    [PARTITION (partition_name,...)] 
+    [(col_name,...)]
+    {VALUES | VALUE} ({expr | DEFAULT},...),(...),...
+    [ ON DUPLICATE KEY UPDATE
+      col_name=expr
+        [, col_name=expr] ... ]
+Например:
+INSERT INTO Reviewer VALUES(209, 'Roger Ebert');
+	Основные запросы SQL
+Основными запросами являются SELECT – выборка данных:
+SELECT name FROM Movie WHERE year = 1979;
+UPDATE – обновление записей:
+UPDATE Movie SET year = year + 25 WHERE 4 <= (SELECT AVG(stars) FROM Rating WHERE Movie.mID = Rating.mID); 
+INSERT – добавление данных:
+INSERT INTO Reviewer VALUES(209, 'Roger Ebert');
+	Бинарные логи и mysql dump
+	Бинарные логи хранят все изменения данных в бд, которые вносились в бд после включения данной функции. Главное назначение для создания репликаций master-slave.
+
+Mysql dump - утилита предназначена длясоздания дампа бд. Будет содержать набор команд MySQL, которые создают таблицы и вносят данные. Для создания дампа данных необходимо запретить внесение в бд данных, сделать дамп и разрешить внесения изменений.
+	Настройка репликации Master-Slave
+	Для настройки реплицаии мастер-слейв необходимо поставить всем серверам разные ид, на мастере необходимо создать пользователя с правами на репликацию. На слейве необходимо командой CHANGE MASTER TO задать имя пользователя на мастере, ип мастера, порт мастера, пароль пользователя на мастере, файл бинарного лога и начальную позицию в логе.
+	Для чего используется ?
+Репликация используется по ряду причин:
+	отказоустойчивость
+	снижение трафика
+	объединение данных
+	производительность
+	масштабируемость
+	Какие типы бывают?
+Master-Slave репликация: данные записываются только на мастер сервер, а потом копируются на слейв сервера. Слейв при этом доступен только для чтения.
+Master-Master репликация: данные можна писать на все сервера и синхронизация происходит между всеми серверами.

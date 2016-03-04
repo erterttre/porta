@@ -1,0 +1,109 @@
+1.SELECT title FROM Movie WHERE director = 'Steven Spielberg';
+
++-------------------------+ 
+| title                   | 
++-------------------------+ 
+| E.T.                    | 
+| Raiders of the Lost Ark | 
++-------------------------+ 
+2.mysql> SELECT DISTINCT year 
+    -> FROM Movie, Rating 
+    -> WHERE Movie.mID = Rating.mID AND (Rating.stars = 4 OR Rating.stars = 5) 
+    -> ORDER BY year ASC; 
++------+ 
+| year | 
++------+ 
+| 1937 | 
+| 1939 | 
+| 1981 | 
+| 2009 | 
++------+
+3.
+SELECT title
+FROM Movie 
+ WHERE Movie.mID NOT IN (SELECT DISTINCT mID FROM Rating);
+4.SELECT name FROM Reviewer,Rating WHERE Reviewer.rID = Rating.rID AND Rating.ratingDate = NULL; 
+5.mysql> SELECT name AS reviewer_name, title AS movie_title, stars FROM Reviewer, Rating, Movie WHERE Reviewer.rID = Rating.rID AND Rating.mID = Movie.mID; 
++------------------+-------------------------+-------+ 
+| reviewer_name    | movie_title             | stars | 
++------------------+-------------------------+-------+ 
+| Sarah Martinez   | Gone with the Wind      |     2 | 
+| Sarah Martinez   | Gone with the Wind      |     4 | 
+| Daniel Lewis     | Snow White              |     4 | 
+| Brittany Harris  | The Sound of Music      |     2 | 
+| Brittany Harris  | Raiders of the Lost Ark |     4 | 
+| Brittany Harris  | Raiders of the Lost Ark |     2 | 
+| Mike Anderson    | Gone with the Wind      |     3 | 
+| Chris Jackson    | The Sound of Music      |     3 | 
+| Chris Jackson    | E.T.                    |     2 | 
+| Chris Jackson    | Raiders of the Lost Ark |     4 | 
+| Elizabeth Thomas | Avatar                  |     3 | 
+| Elizabeth Thomas | Snow White              |     5 | 
+| James Cameron    | Avatar                  |     5 | 
+| Ashley White     | E.T.                    |     3 | 
++------------------+-------------------------+-------+ 
+6.mysql> SELECT Movie.title, Reviewer.name 
+    -> FROM Movie, Reviewer, 
+    -> (SELECT rID, mID, stars 
+    -> FROM (SELECT * FROM Rating ORDER BY ratingDate DESC) AS Rating 
+    -> GROUP BY rID, mID 
+    -> HAVING  COUNT(*) = 2 AND stars = MAX(stars)) AS tmp 
+    -> WHERE tmp.rID = Reviewer.rID AND tmp.mID = Movie.mID; 
++--------------------+----------------+ 
+| title              | name           | 
++--------------------+----------------+ 
+| Gone with the Wind | Sarah Martinez | 
++--------------------+----------------+ 
+7.mysql> SELECT title, stars 
+    -> FROM Movie, (SELECT mID, MAX(stars) AS stars 
+    -> FROM Rating 
+    -> GROUP BY mID) AS tmp 
+    -> WHERE Movie.mID = tmp.mID 
+    -> ORDER BY title; 
++-------------------------+-------+ 
+| title                   | stars | 
++-------------------------+-------+ 
+| Avatar                  |     5 | 
+| E.T.                    |     3 | 
+| Gone with the Wind      |     4 | 
+| Raiders of the Lost Ark |     4 | 
+| Snow White              |     5 | 
+| The Sound of Music      |     3 | 
++-------------------------+-------+ 
+8.mysql> SELECT title, (MAX(stars) - MIN(stars)) AS ds 
+    -> FROM Movie, Rating 
+    -> WHERE Movie.mID = Rating.mID 
+    -> GROUP BY Movie.mID 
+    -> ORDER BY ds, title; 
++-------------------------+------+ 
+| title                   | ds   | 
++-------------------------+------+ 
+| E.T.                    |    1 | 
+| Snow White              |    1 | 
+| The Sound of Music      |    1 | 
+| Avatar                  |    2 | 
+| Gone with the Wind      |    2 | 
+| Raiders of the Lost Ark |    2 | 
++-------------------------+------+ 
+9.mysql> SELECT AVG(before80) AS before80, AVG(after80) AS after80, ( AVG(after80) - AVG(before80)) AS diff 
+    -> FROM (SELECT AVG(stars) AS after80 
+    -> FROM Movie, Rating 
+    -> WHERE Movie.mID = Rating.mID 
+    -> GROUP BY title,year 
+    -> HAVING year < 1980) AS st_before80, 
+    -> (SELECT AVG(stars) AS before80 
+    -> FROM Movie, Rating 
+    -> WHERE Movie.mID = Rating.mID 
+    -> GROUP BY title,year 
+    -> HAVING year > 1980) AS st_after80; 
++------------+------------+------------+ 
+| before80   | after80    | diff       | 
++------------+------------+------------+ 
+| 3.27776667 | 3.33333333 | 0.05556667 | 
++------------+------------+------------+ 
+
+Вопросы
+1.INSERT INTO Reviewer VALUES(209, 'Roger Ebert');
+2.mysql> UPDATE Rating SET stars = 5, ratingDate = NULL
+WHERE rID = (SELECT rID FROM Reviewer WHERE name = 'James Cameron'); 
+3.UPDATE Movie SET year = year + 25 WHERE 4 <= (SELECT AVG(stars) FROM Rating WHERE Movie.mID = Rating.mID); 

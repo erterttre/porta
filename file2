@@ -1,0 +1,34 @@
+Trying 46.149.88.44...
+Connected to goo.gl.
+Escape character is '^]'.
+HTTP/1.1 302 Moved Temporarily
+Location: https://www.google.com/accounts/ServiceLogin?service=urlshortener&continue=http://goo.gl/?authed%3D1&followup=http://goo.gl/?authed%3D1&passive=true&go=true
+Content-Type: text/html; charset=UTF-8
+Date: Mon, 29 Feb 2016 19:36:36 GMT
+Expires: Mon, 29 Feb 2016 19:36:36 GMT
+Cache-Control: private, max-age=0
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-XSS-Protection: 1; mode=block
+Server: GSE
+Set-Cookie: authed=1;Path=/
+Accept-Ranges: none
+Vary: Accept-Encoding
+Transfer-Encoding: chunked
+
+162
+<HTML>
+<HEAD>
+<TITLE>Moved Temporarily</TITLE>
+</HEAD>
+<BODY BGCOLOR="#FFFFFF" TEXT="#000000">
+<H1>Moved Temporarily</H1>
+The document has moved <A HREF="https://www.google.com/accounts/ServiceLogin?service=urlshortener&amp;continue=http://goo.gl/?authed%3D1&amp;followup=http://goo.gl/?authed%3D1&amp;passive=true&amp;go=true">here</A>.
+</BODY>
+</HTML>
+
+0
+
+
+telnet> quit
+Connection closed.

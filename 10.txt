@@ -1,0 +1,31 @@
+1.
+	git clone git@github.com:erterttre/porta.git
+	или
+	git clone https://github.com/erterttre/porta.git
+2.
+	cd TESTING
+	git tag 0.1
+	git push --tags//все теги
+3.
+	//создание и переход на ветку "testnew"
+	git checkout -b testnew
+	или
+	git branch testnew
+	git checkout testnew
+	//удаляем все файлы
+	git rm *
+4.
+	git commit
+	git push origin HEAD //если находиться в этой ветке
+	или
+	git push origin testnew
+5.
+	git diff master..testnew
+6.
+	git checkout master
+	git merge testnew
+7.
+	git tag 0.1
+	git push --tags
+
+	

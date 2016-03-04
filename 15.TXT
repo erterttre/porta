@@ -1,0 +1,10 @@
+1.
+	yum search mysql-server
+	yum install mysql-server
+2.
+	Для включения работы сервера в режиме только «unix сокеты» в конфигурационный 
+	файл my.cnf вносим такие строки:
+	socket= /tmp/mysql.sock
+	skip-networking
+	После этого перезапускаем демон mysql 
+3.

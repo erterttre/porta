@@ -1,0 +1,132 @@
+
+		PING
+2.
+	ping 192.168.0.101
+PING 192.168.0.101 (192.168.0.101) 56(84) bytes of data.
+64 bytes from 192.168.0.101: icmp_seq=1 ttl=128 time=3.07 ms
+64 bytes from 192.168.0.101: icmp_seq=2 ttl=128 time=0.990 ms
+64 bytes from 192.168.0.101: icmp_seq=3 ttl=128 time=3.98 ms
+64 bytes from 192.168.0.101: icmp_seq=4 ttl=128 time=1.06 ms
+
+3.
+	ping -b 192.168.0.255
+WARNING: pinging broadcast address
+PING 192.168.0.255 (192.168.0.255) 56(84) bytes of data.
+64 bytes from 192.168.0.1: icmp_seq=1 ttl=64 time=0.185 ms
+64 bytes from 192.168.0.102: icmp_seq=1 ttl=69 time=99.1 ms (DUP!)
+64 bytes from 192.168.0.1: icmp_seq=2 ttl=64 time=0.193 ms
+64 bytes from 192.168.0.102: icmp_seq=2 ttl=69 time=18.0 ms (DUP!)
+4.
+	ping goo.gl
+PING goo.gl (46.149.88.34) 56(84) bytes of data.
+64 bytes from cache.google.com (46.149.88.34): icmp_seq=1 ttl=61 time=0.742 ms
+64 bytes from cache.google.com (46.149.88.34): icmp_seq=2 ttl=61 time=0.977 ms
+64 bytes from cache.google.com (46.149.88.34): icmp_seq=3 ttl=61 time=0.890 ms
+64 bytes from cache.google.com (46.149.88.34): icmp_seq=4 ttl=61 time=0.715 ms
+
+5.
+	ping -i 15 -s 65507 localhost
+6.
+	ping 192.168.254.254
+PING 192.168.254.254 (192.168.254.254) 56(84) bytes of data.
+^C
+--- 192.168.254.254 ping statistics ---
+27 packets transmitted, 0 received, 100% packet loss, time 26208ms
+
+7.
+	ifconfig eth0 down
+8.
+	ping 192.168.0.101
+	connect: Network is unreachable
+9.
+	ifconfig eth0 up
+10.Утилита ping предназначена для базовой проверки работоспособности сети, с помощью нее можно узнать время задержки.
+ К ее недостаткам относится невозможность узнать какие из узлов сети не работают и задержку и процент потерь на каждом из них.
+
+		TRACEROUTE
+1.
+	sudo apt-get install traceroute
+3.
+	traceroute 192.168.0.101
+traceroute to 192.168.0.101 (192.168.0.101), 30 hops max, 60 byte packets
+ 1  * * *
+ 2  * * *
+ 3  * * *
+ 4  * * *
+ 5  * * *
+ 6  *^C
+
+4.
+	traceroute -q 4 192.168.0.101
+5.
+	traceroute goo.gl
+traceroute to goo.gl (46.149.88.57), 30 hops max, 60 byte packets
+ 1  192.168.0.1 (192.168.0.1)  0.122 ms  0.130 ms  0.137 ms
+ 2  * * *
+ 3  * * *
+ 4  * * *
+ 5  * * *
+ 6  * * *
+ 7  *^C
+
+6.
+	sudo traceroute -U  goo.gl
+7.
+	sudo traceroute -T  goo.gl
+8.
+	traceroute -m 5 goo.gl
+9.
+	traceroute 192.168.254.254
+10.Утилита traceroutе предназначена для просмотра пути по которому следует пакет для достижения целевого адреса, 
+а также дает возможность посмотреть задержку на каждом из маршрутизаторов,
+ к недостаткам можно отнести невозможность посмотреть процент потерь на каждом из узлов сети.
+	
+		MTR
+1.
+	sudo apt-get install mtr
+3.
+	просмотра всмысле в текстовом режиме?
+	mtr --curses 192.168.0.101
+4.
+	mtr --report c 100 192.168.0.101
+HOST: erterttre-H61M-DS2          Loss%   Snt   Last   Avg  Best  Wrst StDev
+  1.|-- 192.168.0.101              0.0%    10    1.0   1.8   0.9   4.2   0.8
+5.
+	mtr --report c 100 goo.gl
+HOST: erterttre-H61M-DS2          Loss%   Snt   Last   Avg  Best  Wrst StDev
+  1.|-- 192.168.0.1                0.0%    10    0.2   0.2   0.1   0.2   0.0
+  2.|-- ppp-pool.osnova.tv         0.0%    10    0.5   0.6   0.4   0.8   0.0
+  3.|-- ???                       100.0    10    0.0   0.0   0.0   0.0   0.0
+  4.|-- cache.google.com           0.0%    10    0.8   0.9   0.8   1.1   0.0
+6.
+	mtr -r goo.gl -c 100 -s 65K
+7.Утилита mtr является улучшенной версией traceroute, 
+она позволяет также получать процент потерянных пакетов и статистическую информацию для каждого узла сети,
+ такую как среднее время задержки, лучшее время задержки, среднеквадратичное отклонение и прочее.
+	
+	TELNET
+3.
+	 telnet www.portaone.com 80
+Trying 195.138.219.142...
+Connected to www.portaone.com.
+Escape character is '^]'.
+HEAD / HTTP/1.1
+Host: www.portaone.com
+
+HTTP/1.1 200 OK
+Date: Mon, 29 Feb 2016 22:26:03 GMT
+Server: Apache
+X-Powered-By: PHP/5.2.5
+P3P: policyref="/bitrix/p3p.xml", CP="NON DSP COR CUR ADM DEV PSA PSD OUR UNR BUS UNI COM NAV INT DEM STA"
+X-Powered-CMS: Bitrix Site Manager (c1ae2aa01b6b5a17c21cfbf413fe3309)
+Set-Cookie: PHPSESSID=mo96da0mqdl0jfa48p9tvgr752; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Type: text/html; charset=UTF-8
+4.telnet www.portaone.com 3306
+5.telnet www.portaone.com 1024
+6.Утилита telnet позволяет проверять доступность портов на удаленном сервере, 
+а также вручную задавать содержимое отправляемых пакетов. 
+Может использоватся в целях отладки. 
+

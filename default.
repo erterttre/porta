@@ -1,0 +1,146 @@
+
+====================
+1. Вывести запросы записей в базу за 2 минуты на протяжении любого часа mysqlbinlog.
+
+root@localhost:/var/lib/mysql# mysqlbinlog -s -u root -d Movies --start-datetime="2015-05-05 16:46:00" --stop-datetime="2015-05-05 16:48:00" -t mysql-bin.000015
+/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE=1*/;
+/*!40019 SET @@session.max_insert_delayed_threads=0*/;
+/*!50003 SET @OLD_COMPLETION_TYPE=@@COMPLETION_TYPE,COMPLETION_TYPE=0*/;
+DELIMITER /*!*/;
+SET TIMESTAMP=1430833656/*!*/;
+SET @@session.pseudo_thread_id=999999999/*!*/;
+SET @@session.foreign_key_checks=1, @@session.sql_auto_is_null=0, @@session.unique_checks=1, @@session.autocommit=1/*!*/;
+SET @@session.sql_mode=0/*!*/;
+SET @@session.auto_increment_increment=1, @@session.auto_increment_offset=1/*!*/;
+/*!\C utf8 *//*!*/;
+SET @@session.character_set_client=33,@@session.collation_connection=33,@@session.collation_server=8/*!*/;
+SET @@session.lc_time_names=0/*!*/;
+SET @@session.collation_database=DEFAULT/*!*/;
+BEGIN
+/*!*/;
+use `Movies`/*!*/;
+SET TIMESTAMP=1430833656/*!*/;
+insert into Movie values(111, "Inception", 2010, "Nolan")
+/*!*/;
+COMMIT/*!*/;
+DELIMITER ;
+# End of log file
+ROLLBACK /* added by mysqlbinlog */;
+/*!50003 SET COMPLETION_TYPE=@OLD_COMPLETION_TYPE*/;
+/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE=0*/;
+
+
+2. Напишите основные опции настроек Мастера и подчиненного сервера:
+
+основные опции подчиненного сервера:
+	MASTER_HOST - ip адрес хоста
+	MASTER_USER - пользователь на мастере для репликации
+	MASTER_PASSWORD - пароль пользователя на мастере
+	MASTER_LOG_FILE - лог файл мастера
+	MASTER_LOG_POS - позиция с какой нужно начинать репликацию
+опции мастера:
+	в файле my.cnf включить бинарное логирование log-bin=mysql-bin
+	указать номер сервера server-id
+
+3. Привести пример запроса для ввод параметров репликации.
+
+	change master to master_host='192.168.73.121', master_user='repl', master_port=3306, master_log_file='mysql-bin.000015', master_log_pos='107';
+
+4. Востановить репликацию.
+
+1. Конфигурация master-сервиса.
+a) Создать пользователя для репликации. Необходимо запомнить имя пользователя и пароль. Есть возможность ограничить хосты, с которых разрешен вход для данного пользователя.
+
+mysql> GRANT REPLICATION SLAVE ON *.*
+-> TO 'repl'@'%'
+-> IDENTIFIED BY 'slavepass';
+
+b) Включить бинарное логирование (файл my.cnf секция mysqld).
+log-bin=mysql-bin
+
+c) Задать номер сервиса/сервера (файл my.cnf секция mysqld).
+
+server-id=1
+
+2. Конфигурация slave-сервиса (файл my.cnf секция mysqld)
+a) Задать номер сервиса/сервера (файл my.cnf секция mysqld). Номера должны быть уникальны для всех взаимодействующих серверов!
+
+server-id=2
+
+b) Временный запрет старта репликации. После успешного запуска репликации необходимо удалить.
+
+skip-slave
+
+3. Получение информации о состоянии master-сервиса и создание дампа базы.
+a) Блокирование таблиц (данные можно только читать, всё кэши сбрасываются на диск).
+
+mysql> FLUSH TABLES WITH READ LOCK;
+
+b) Определение файла и позиции бинарного логирования. Необходимо запомнить/записать File и Position.
+
+SHOW MASTER STATUS;
+
+c) Создание дампа баз данных mysql и test.
+
+# cd /var/lib/mysql/
+# tar -cf mysqldb.tar {mysql,test}
+
+d) Освобождение блокировки.
+
+UNLOCK TABLES;
+
+Замечания.
+1. Для создания дампа и получения информации о состоянии master’а можно использовать mysqldump --all-databases --master-data >dbdump.db.
+2. “SHOW MASTER STATUS” ничего не покажет если не включено бинарное логирование (или если после смены конфигурации не перезапущен сервис mysql).
+
+4. Подготовка данных для slave (в нашем случае – распаковка). Предварительно необходимо остановить slave-сервис!
+
+# cd /var/lib/mysql
+# mv mysql mysql_old; mv test test_old
+# tar –xf mysqldb.tar
+# chown –R mysql:mysql {mysql,test}
+
+5. Конфигурирование параметров master-сервиса на slave-сервисе. Предварительно необходимо запустить сервис mysql (slave). Автоматический запуск репликации должен быть отключен (skip-slave).
+
+mysql> CHANGE MASTER TO
+-> MASTER_HOST='master_host_name',
+-> MASTER_USER='replication_user_name',
+-> MASTER_PASSWORD='replication_password',
+-> MASTER_LOG_FILE='recorded_log_file_name',
+-> MASTER_LOG_POS=recorded_log_position;
+
+6. Запуск потока репликации на slave сервисе. Не забыть убрать skip-slave из my.cnf (иначе репликация после перезапуска сервиса не будет запускаться)!
+
+mysql> SLAVE START
+
+5. Востановить репликацию с xtrabackup
+
+На мастере создаем копию бд
+sudo innobackupex --user=root --password=????? /home/selld/
+
+sudo innobackupex --user=root --password=&&&* --apply-log /home/selld/2015-05-05_17-11-03/
+
+Заливаем бекап на слейв
+sudo rsync -avpP -e ssh /home/selld/2015-05-05_17-11-03/ root@192.168.73.121:/var/lib/mysql
+
+Восстанавливаем права на слейве
+chown mysql:mysql -R /var/lib/mysql
+
+Создаем на мастере пользователя для репликации
+GRANT REPLICATION SLAVE ON *.*  TO 'repl'@'%'
+ IDENTIFIED BY '123';
+
+На слейве задаем в my.cnf задаем server-id=2 и перезапускаем сервер
+
+На мастере получаем название файла лога и позицию
+cat /var/lib/mysql/xtrabackup_binlog_info
+
+Конфигугрируем репликацию на слейве
+CHANGE MASTER TO
+                MASTER_HOST='192.168.73.143',
+                MASTER_USER='repl',
+                MASTER_PASSWORD='123',
+                MASTER_LOG_FILE='mysql-bin.000015',
+                MASTER_LOG_POS=481;
+
+Включаем репликацию: start slave;
